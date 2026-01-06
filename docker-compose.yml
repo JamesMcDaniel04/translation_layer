@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/translation_layer
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-credentials.json
+      - LANG_DETECT_MIN_CHARS=10
+      - LANG_DETECT_CONFIDENCE_THRESHOLD=0.7
+      - DEFAULT_TRANSLATOR=deepl
+      - DEFAULT_TARGET_LANG=en
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./models:/app/models:ro
+      - ./credentials:/app/credentials:ro
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: translation_layer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./src/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d translation_layer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

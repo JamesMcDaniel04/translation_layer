@@ -1,0 +1,2 @@
+# This directory contains the fastText language detection model.
+# Run `npm run download-model` to download lid.176.bin
