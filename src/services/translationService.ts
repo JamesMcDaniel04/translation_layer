@@ -1,6 +1,6 @@
 import { detectLanguage } from './languageDetector';
 import { getTranslatorForTenant } from '../providers/factory';
-import { trackUsage, trackBatchUsage } from './usageTracker';
+import { trackUsage, trackBatchUsage, estimateCost } from './usageTracker';
 import {
   NormalizeRequest,
   NormalizeResponse,
@@ -50,11 +50,13 @@ export async function normalizeText(
 
   // Skip translation if source equals target or source is unknown
   if (sourceLang === targetLang || sourceLang === 'und') {
+    const estimated = estimateCost(textChars, 'none');
     const meta: NormalizeMeta = {
       detected_confidence: detectedConfidence,
       translator: 'none',
       detector: 'fastText',
       chars: textChars,
+      estimated_cost_usd: estimated.estimated_usd,
       request_id: reqId,
     };
 
@@ -109,6 +111,7 @@ export async function normalizeText(
     translator: translator.name,
     detector: 'fastText',
     chars: textChars,
+    estimated_cost_usd: estimateCost(textChars, translator.name).estimated_usd,
     request_id: reqId,
   };
 
@@ -155,6 +158,7 @@ export async function normalizeTextBatch(
   // but sequential processing is safer for rate limits
   const results: NormalizeResponse[] = [];
   let totalChars = 0;
+  let totalEstimatedCost = 0;
 
   for (const item of request.items) {
     const result = await normalizeText(
@@ -171,6 +175,7 @@ export async function normalizeTextBatch(
     );
     results.push(result);
     totalChars += countChars(item.text);
+    totalEstimatedCost += result.meta.estimated_cost_usd || 0;
   }
 
   console.info(
@@ -183,6 +188,7 @@ export async function normalizeTextBatch(
     meta: {
       total_items: request.items.length,
       total_chars: totalChars,
+      estimated_total_cost_usd: Math.round(totalEstimatedCost * 10000) / 10000,
       request_id: requestId,
     },
   };
@@ -204,6 +210,7 @@ export async function normalizeTextBatchParallel(
   // Process in batches of `concurrency`
   const results: NormalizeResponse[] = [];
   let totalChars = 0;
+  let totalEstimatedCost = 0;
 
   for (let i = 0; i < request.items.length; i += concurrency) {
     const batch = request.items.slice(i, i + concurrency);
@@ -228,6 +235,9 @@ export async function normalizeTextBatchParallel(
     batch.forEach((item) => {
       totalChars += countChars(item.text);
     });
+    batchResults.forEach((result) => {
+      totalEstimatedCost += result.meta.estimated_cost_usd || 0;
+    });
   }
 
   console.info(
@@ -240,6 +250,7 @@ export async function normalizeTextBatchParallel(
     meta: {
       total_items: request.items.length,
       total_chars: totalChars,
+      estimated_total_cost_usd: Math.round(totalEstimatedCost * 10000) / 10000,
       request_id: requestId,
     },
   };

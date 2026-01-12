@@ -105,6 +105,7 @@ Response:
     "translator": "deepl",
     "detector": "fastText",
     "chars": 52,
+    "estimated_cost_usd": 0.001,
     "request_id": "req_abc123def456"
   }
 }
@@ -145,6 +146,7 @@ Response:
   "meta": {
     "total_items": 2,
     "total_chars": 45,
+    "estimated_total_cost_usd": 0.0009,
     "request_id": "req_xyz789"
   }
 }

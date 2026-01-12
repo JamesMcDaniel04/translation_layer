@@ -49,6 +49,7 @@ export interface NormalizeMeta {
   translator: string;
   detector: string;
   chars: number;
+  estimated_cost_usd?: number;
   request_id: string;
 }
 
@@ -71,6 +72,7 @@ export interface BatchNormalizeResponse {
   meta: {
     total_items: number;
     total_chars: number;
+    estimated_total_cost_usd?: number;
     request_id: string;
   };
 }

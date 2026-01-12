@@ -5,12 +5,18 @@ import {
   ValidationError,
 } from '../types';
 import { normalizeText, normalizeTextBatch } from '../services/translationService';
-import { simpleAuthMiddleware } from '../middleware/auth';
+import { createAuthMiddleware, simpleAuthMiddleware } from '../middleware/auth';
+import { apiKeyRepository } from '../db/repositories/apiKey';
+import { tenantRepository } from '../db/repositories/tenant';
+import { config } from '../config';
 
 const router = Router();
 
 // Apply authentication to all normalize routes
-router.use(simpleAuthMiddleware);
+const authMiddleware = config.server.isDev
+  ? simpleAuthMiddleware
+  : createAuthMiddleware(apiKeyRepository, tenantRepository);
+router.use(authMiddleware);
 
 /**
  * POST /v1/normalize

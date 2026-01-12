@@ -38,9 +38,10 @@ export function estimateCost(
   const costPer1M: Record<string, number> = {
     deepl: 20,
     google: 20,
+    none: 0,
   };
 
-  const rate = costPer1M[provider] || 20;
+  const rate = costPer1M[provider] ?? 20;
   const estimated_usd = (chars / 1_000_000) * rate;
 
   return {
