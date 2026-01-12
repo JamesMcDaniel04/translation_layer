@@ -101,7 +101,12 @@ export interface Tenant {
   glossary: {
     preserve: string[];
   };
+  rate_limit_override?: {
+    requests_per_minute?: number;
+    requests_per_hour?: number;
+  };
   created_at: Date;
+  updated_at?: Date;
 }
 
 // API Key
@@ -111,6 +116,24 @@ export interface ApiKey {
   key_hash: string;
   name: string;
   active: boolean;
+  expires_at?: Date;
+  last_used_at?: Date;
+  created_at: Date;
+}
+
+// Audit log entry
+export interface AuditLog {
+  id: string;
+  tenant_id?: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
+  actor_type: 'user' | 'system' | 'api_key';
+  actor_id?: string;
+  details?: Record<string, unknown>;
+  outcome: 'success' | 'failure';
+  reason?: string;
+  ip_address?: string;
   created_at: Date;
 }
 
