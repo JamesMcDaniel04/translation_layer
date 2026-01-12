@@ -11,19 +11,39 @@ services:
       - NODE_ENV=development
       - PORT=3000
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/translation_layer
+      - REDIS_URL=redis://redis:6379
+      - REDIS_ENABLED=true
       - DEEPL_API_KEY=${DEEPL_API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-credentials.json
       - LANG_DETECT_MIN_CHARS=10
       - LANG_DETECT_CONFIDENCE_THRESHOLD=0.7
       - DEFAULT_TRANSLATOR=deepl
       - DEFAULT_TARGET_LANG=en
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - RATE_LIMIT_WINDOW_MS=60000
+      - CACHE_ENABLED=true
+      - CACHE_TTL_SECONDS=3600
+      - CIRCUIT_BREAKER_ENABLED=true
+      - METRICS_ENABLED=true
+      - LOG_LEVEL=info
+      - LOG_PRETTY_PRINT=true
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-dev-admin-key}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./models:/app/models:ro
       - ./credentials:/app/credentials:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   db:
     image: postgres:15-alpine
@@ -43,5 +63,33 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Optional: Redis Commander for debugging
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - debug
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  redisdata:
